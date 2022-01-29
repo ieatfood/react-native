@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -15,6 +15,7 @@ import android.content.Context;
 import android.os.Build;
 import android.view.View;
 import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
@@ -184,22 +185,36 @@ public class StatusBarModule extends NativeStatusBarManagerAndroidSpec {
       return;
     }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      UiThreadUtil.runOnUiThread(
-          new Runnable() {
-            @TargetApi(Build.VERSION_CODES.M)
-            @Override
-            public void run() {
-              View decorView = activity.getWindow().getDecorView();
-              int systemUiVisibilityFlags = decorView.getSystemUiVisibility();
-              if ("dark-content".equals(style)) {
-                systemUiVisibilityFlags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-              } else {
-                systemUiVisibilityFlags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-              }
-              decorView.setSystemUiVisibility(systemUiVisibilityFlags);
+    UiThreadUtil.runOnUiThread(
+      new Runnable() {
+        @TargetApi(Build.VERSION_CODES.R)
+        @Override
+        public void run() {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController insetsController = activity.getWindow().getInsetsController();
+            if ("dark-content".equals(style)) {
+              // dark-content means dark icons on a light status bar
+              insetsController.setSystemBarsAppearance(
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+              );
+            } else {
+              insetsController.setSystemBarsAppearance(
+                0,
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+              );
             }
-          });
-    }
+          } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            View decorView = activity.getWindow().getDecorView();
+            int systemUiVisibilityFlags = decorView.getSystemUiVisibility();
+            if ("dark-content".equals(style)) {
+              systemUiVisibilityFlags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            } else {
+              systemUiVisibilityFlags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            }
+            decorView.setSystemUiVisibility(systemUiVisibilityFlags);
+          }
+        }
+      });
   }
 }
